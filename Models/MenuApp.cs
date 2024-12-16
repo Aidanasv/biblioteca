@@ -181,9 +181,58 @@ class MenuApp {
 
     private void EliminarLibro() {
 
+        int indice = 1;
+
+        foreach (var libro in libros)
+        {
+            Console.WriteLine($"{indice} {libro.Nombre}");
+            indice++;
+        }
+        
+        Console.WriteLine("Selecciona el libro que deseas eliminar: ");
+        int numeroLibro = int.Parse(Console.ReadLine());
+
+        libros.RemoveAt(numeroLibro-1);
     }
 
     private void ModificarLibro() {
+
+        //encontrar el libro
+        int indice = 1;
+
+        foreach (var libro in libros)
+        {
+            Console.WriteLine($"{indice} {libro.Nombre}");
+            indice++;
+        }
+        
+        Console.WriteLine("Selecciona el libro que deseas modificar: ");
+        int numeroLibro = int.Parse(Console.ReadLine());
+        
+        Libro libroModificado = libros[numeroLibro-1];
+
+        Console.WriteLine("---Introduce los nuevos datos del libro:---");
+        Console.Write("Nombre del libro: ");
+        libroModificado.Nombre = Console.ReadLine();
+        Console.Write("Autor: ");
+        libroModificado.Autor = Console.ReadLine();
+        Console.Write("Precio: ");
+        libroModificado.Precio = double.Parse(Console.ReadLine());
+        Console.Write("Género: ");
+        libroModificado.Genero = Console.ReadLine();
+        Console.Write("Fecha de Publicación: ");
+        int Year = int.Parse(Console.ReadLine());
+        int Mes = int.Parse(Console.ReadLine());
+        int Dia = int.Parse(Console.ReadLine());
+        libroModificado.FechaDePublicacion = new DateTime(Year,Mes,Dia);
+        Console.Write("Editorial: ");
+        libroModificado.Editorial = Console.ReadLine();
+        Console.Write("Páginas: ");
+        libroModificado.Paginas = int.Parse(Console.ReadLine());
+        Console.Write("Estatus: ");
+        libroModificado.Estatus = int.Parse(Console.ReadLine());
+
+        libros[numeroLibro-1] = libroModificado;
 
     }
 

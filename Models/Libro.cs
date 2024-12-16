@@ -32,5 +32,11 @@ public class Libro {
         Console.WriteLine($"Páginas: \t\t{Paginas}");
         Console.WriteLine($"Estatus: \t\t{Estatus}");
     }
+
+    public bool Equals(Libro other)
+        {
+            if (other == null) return false;
+            return (this.Nombre.Equals(other.Nombre));
+        }
 }
 
