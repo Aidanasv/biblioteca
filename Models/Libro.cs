@@ -1,17 +1,19 @@
 namespace Models;
 
-public class Libro {
-    public string Nombre {get;set;}
-    public string Autor {get;set;}
-    public double Precio {get;set;}
-    public string Genero {get;set;}
-    public DateTime FechaDePublicacion {get;set;}
-    public string  Editorial {get;set;}
-    public int Paginas {get;set;}
-    public int Estatus {get;set;}
-    
+public class Libro
+{
+    public string Nombre { get; set; }
+    public string Autor { get; set; }
+    public double Precio { get; set; }
+    public string Genero { get; set; }
+    public DateTime FechaDePublicacion { get; set; }
+    public string Editorial { get; set; }
+    public int Paginas { get; set; }
+    public int Estatus { get; set; }
 
-    public Libro(string nombre, string autor, double precio, string genero, DateTime fechaDePublicacion, string editorial, int paginas, int estatus) {
+
+    public Libro(string nombre, string autor, double precio, string genero, DateTime fechaDePublicacion, string editorial, int paginas, int estatus)
+    {
         Nombre = nombre;
         Autor = autor;
         Precio = precio;
@@ -22,7 +24,8 @@ public class Libro {
         Estatus = estatus;
     }
 
-    public void MostrarDetalles() {
+    public void MostrarDetalles()
+    {
         Console.WriteLine(Nombre);
         Console.WriteLine($"Autor: \t\t{Autor}");
         Console.WriteLine($"Precio: \t\t{Precio}");
@@ -34,9 +37,9 @@ public class Libro {
     }
 
     public bool Equals(Libro other)
-        {
-            if (other == null) return false;
-            return (this.Nombre.Equals(other.Nombre));
-        }
+    {
+        if (other == null) return false;
+        return (this.Nombre.Equals(other.Nombre));
+    }
 }
 
