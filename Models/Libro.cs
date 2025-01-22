@@ -1,4 +1,5 @@
 namespace Models;
+using Spectre.Console;
 
 public class Libro
 {
@@ -26,14 +27,25 @@ public class Libro
 
     public void MostrarDetalles()
     {
-        Console.WriteLine(Nombre);
-        Console.WriteLine($"Autor: \t\t{Autor}");
-        Console.WriteLine($"Precio: \t\t{Precio}");
-        Console.WriteLine($"Género: \t\t{Genero}");
-        Console.WriteLine($"Editorial: \t\t{Editorial}");
-        Console.WriteLine($"Fecha de Publicación: \t\t{FechaDePublicacion}");
-        Console.WriteLine($"Páginas: \t\t{Paginas}");
-        Console.WriteLine($"Estatus: \t\t{Estatus}");
+        var tablaLibros = new Table();
+
+        tablaLibros.Title = new TableTitle($"[bold green]{Nombre}[/]");
+        tablaLibros.HideHeaders();
+
+        tablaLibros.Border = TableBorder.Square;
+
+        tablaLibros.AddColumn(string.Empty);
+        tablaLibros.AddColumn(string.Empty);
+
+        tablaLibros.AddRow("[underline deepskyblue2]Nombre[/]", Nombre);
+        tablaLibros.AddRow("[underline deepskyblue2]Autor[/]", Autor);
+        tablaLibros.AddRow("[underline deepskyblue2]Precio[/]", Precio.ToString());
+        tablaLibros.AddRow("[underline deepskyblue2]Género[/]", Genero);
+        tablaLibros.AddRow("[underline deepskyblue2]Editorial[/]", Editorial);
+        tablaLibros.AddRow("[underline deepskyblue2]Fecha de Publicación[/]", FechaDePublicacion.ToShortDateString());
+        tablaLibros.AddRow("[underline deepskyblue2]Páginas[/]", Paginas.ToString());
+       
+        AnsiConsole.Write(tablaLibros);
     }
 
     public bool Equals(Libro other)

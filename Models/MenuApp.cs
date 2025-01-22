@@ -1,15 +1,18 @@
+using System.ComponentModel;
+using System.Globalization;
 using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 using Models;
 using SerializeToFile;
+using Spectre.Console;
 
 class MenuApp
 {
-
     private List<Usuario> usuarios;
     private List<Compra> compras;
     private List<Libro> libros;
     private List<Libro> librosComprados;
+    private Usuario usuario;
 
     public MenuApp()
     {
@@ -19,85 +22,164 @@ class MenuApp
     public void MostrarMenuPrincipal()
     {
 
+        var title = new FigletText("Libreria")
+            .Centered()
+            .Color(Color.Green);
+
+        AnsiConsole.Write(title);
+
         CargarDatos();
 
         int opcion = 0;
 
         do
         {
-            Console.WriteLine("--- Menú Principal ---");
-            Console.WriteLine("1-Iniciar Sesión");
-            Console.WriteLine("2-Registrarse");
-            Console.WriteLine("3-Salir");
-
-            if (!int.TryParse(Console.ReadLine(), out opcion) || opcion < 1 || opcion > 5)
+            var opciones = new Dictionary<int, string>
             {
-                Console.WriteLine("Error: Por favor selecciona una opción válida (1-5).");
-                continue;
-            }
+                { 1, "Buscador" },
+                { 2, "Iniciar Sesión" },
+                { 3, "Registrarse" },
+                { 4, "Salir" }
+            };
+
+
+            opcion = AnsiConsole.Prompt(
+                new SelectionPrompt<int>()
+                    .Title("[bold underline green]Menú Principal[/]")
+                    .MoreChoicesText("[grey](Mueve de arriba hacia abajo para seleccionar tu opción)[/]")
+                    .AddChoices(opciones.Keys)
+                    .UseConverter(choice => $"{choice}- {opciones[choice]}"));
 
             switch (opcion)
             {
                 case 1:
-                    IniciarSesion();
+                    Buscador();
                     break;
                 case 2:
-                    RegistrarUsuario();
+                    IniciarSesion();
                     break;
                 case 3:
+                    RegistrarUsuario();
                     break;
-                default:
-                    Console.WriteLine("Opción invalida.");
+                case 4:
                     break;
+
             }
-        } while (opcion != 3);
+        } while (opcion != 4);
 
         GuardarDatos();
     }
 
-    private void RegistrarUsuario()
+    private void Buscador()
     {
-        Console.WriteLine("Introduce tu Nombre: ");
-        string Nombre = Console.ReadLine();
-        Console.WriteLine("Introduce el Nombre de Usuario: ");
-        string NombreDeUsuario = Console.ReadLine();
-        Console.WriteLine("Introduce tu contraseña: ");
-        string Contrasena = Console.ReadLine();
-        Console.WriteLine("Introduce tu correo: ");
-        string Correo = Console.ReadLine();
-        Console.WriteLine("Introduce tu fecha de nacimiento");
 
-        int Year = int.Parse(Console.ReadLine());
-        int Mes = int.Parse(Console.ReadLine());
-        int Dia = int.Parse(Console.ReadLine());
-        DateTime FechaDeNacimiento = new DateTime(Year, Mes, Dia);
+        var busqueda = AnsiConsole.Ask<string>("[bold underline green]Introduce un libro, autor o editorial:[/]");
+        AnsiConsole.Clear();
+        var librosFiltrados = libros.Where((libro) => libro.Nombre.ToLower().Contains(busqueda.ToLower()) || libro.Autor.ToLower().Contains(busqueda.ToLower()) ||
+        libro.Editorial.ToLower().Contains(busqueda.ToLower()) || libro.Genero.ToLower().Contains(busqueda.ToLower()));
 
-        usuarios.Add(new Usuario(Nombre, NombreDeUsuario, Contrasena, Correo, FechaDeNacimiento));
+        int opcion = 0;
+
+        do
+        {
+            var opciones = new Dictionary<int, string>
+            {
+                {0, "Volver"}
+            };
+
+            int indice = 1;
+
+            AnsiConsole.WriteLine();
+            foreach (var libro in librosFiltrados)
+            {
+                opciones.Add(indice, libro.Nombre);
+                indice++;
+            }
+
+            opcion = AnsiConsole.Prompt(
+            new SelectionPrompt<int>()
+                .Title($"[blue]Estos son los resultados de tu búsqueda:[/][bold green] {busqueda}[/]")
+                .MoreChoicesText("[grey](Mueve de arriba hacia abajo para seleccionar tu opción)[/]")
+                .AddChoices(opciones.Keys)
+                .UseConverter(choice => $"{choice}- {opciones[choice]}"));
+
+            if (opcion != 0)
+            {
+                Console.Clear();
+                librosFiltrados.ElementAt(opcion - 1).MostrarDetalles();
+
+                AnsiConsole.MarkupLine("[grey]Pulsa cualquier tecla para volver...[/]");
+                Console.ReadKey();
+            }
+
+            AnsiConsole.Clear();
+
+        } while (opcion != 0);
     }
 
-    private void IniciarSesion()
+    private void RegistrarUsuario()
     {
-        Console.WriteLine("Introduce tu usuario: ");
-        string NombreDeUsuario = Console.ReadLine();
-        Console.WriteLine("Introduce tu contraseña: ");
-        string Contrasena = Console.ReadLine();
+        AnsiConsole.MarkupLine("[bold underline green]Registrar Usuario:[/]");
+        AnsiConsole.WriteLine();
+
+        var Nombre = AnsiConsole.Ask<string>("Introduce tu nombre: ");
+        var NombreDeUsuario = AnsiConsole.Ask<string>("Introduce tu nombre de usuario: ");
+        var Contrasena = AnsiConsole.Ask<string>("Introduce tu contraseña: ");
+        var Correo = AnsiConsole.Ask<string>("Introduce tu correo: ");
+
+        DateTime FechaDeNacimiento;
+
+        while (true)
+        {
+            string inputFecha = AnsiConsole.Ask<string>("Introduce tu fecha de nacimiento en formato [yellow]DD-MM-YYYY[/]: ");
+
+            try
+            {
+                FechaDeNacimiento = DateTime.ParseExact(inputFecha, "dd-MM-yyyy", CultureInfo.InvariantCulture);
+                break;
+            }
+            catch (FormatException)
+            {
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine("[red]El formato de la fecha no es valido. Por favor, intentalo nuevamente en formato [yellow]DD-MM-YYYY[/].[/]");
+                AnsiConsole.WriteLine();
+            }
+        }
+
+        usuarios.Add(new Usuario(Nombre, NombreDeUsuario, Contrasena, Correo, FechaDeNacimiento));
+
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine("[green]Usuario registrado correctamente[/]");
+        GuardarDatos();
+
+    }
+
+    private async void IniciarSesion()
+    {
+        AnsiConsole.MarkupLine("[bold underline green]Iniciar Sesión:[/]");
+        AnsiConsole.WriteLine();
+
+        var NombreDeUsuario = AnsiConsole.Ask<string>("Usuario: ");
+        var Contrasena = AnsiConsole.Ask<string>("Contraseña: ");
 
         bool bandera = false;
         int rolUsuario = -1;
         foreach (var usuario in usuarios)
         {
-
-            Console.WriteLine($"{usuario.NombreDeUsuario} {usuario.Contrasena}");
             if (NombreDeUsuario == usuario.NombreDeUsuario && Contrasena == usuario.Contrasena)
             {
                 bandera = true;
                 rolUsuario = usuario.Rol;
+
+                this.usuario = usuario;
             }
         }
 
         if (bandera == true)
         {
-            Console.WriteLine("Usuario logeado");
+            AnsiConsole.MarkupLine("[green]Usuario logeado[/]");
+
+            AnsiConsole.Clear();
             if (rolUsuario == 0)
             {
                 MenuAdministrador();
@@ -109,8 +191,12 @@ class MenuApp
         }
         else
         {
-            Console.WriteLine("Usuario o contraseña incorrecta");
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine("[red]Usuario o contraseña incorrecta[/]");
+            Thread.Sleep(3000);
         }
+
+        AnsiConsole.Clear();
     }
 
     private void MenuAdministrador()
@@ -120,19 +206,23 @@ class MenuApp
 
         do
         {
-            Console.WriteLine("---Menú Administrador---");
-            Console.WriteLine("1-Ver todos los Libros");
-            Console.WriteLine("2-Añadir Libro");
-            Console.WriteLine("3-Eliminar Libro");
-            Console.WriteLine("4-Modificar Libro");
-            Console.WriteLine("5-Ver Compras");
-            Console.WriteLine("6-Cerrar Sesión");
-
-            if (!int.TryParse(Console.ReadLine(), out opcion) || opcion < 1 || opcion > 6)
+            var opciones = new Dictionary<int, string>
             {
-                Console.WriteLine("Error: Por favor selecciona una opción válida (1-6).");
-                continue;
-            }
+                { 1, "Ver todos los libros" },
+                { 2, "Añadir Libro" },
+                { 3, "Eliminar Libro" },
+                { 4, "Modificar Libro"},
+                { 5, "Ver Compras"},
+                { 6, "Cerrar Sesión"}
+            };
+
+
+            opcion = AnsiConsole.Prompt(
+                new SelectionPrompt<int>()
+                    .Title("[bold underline green]Menú Administrador[/]")
+                    .MoreChoicesText("[grey](Mueve de arriba hacia abajo para seleccionar tu opción)[/]")
+                    .AddChoices(opciones.Keys)
+                    .UseConverter(choice => $"{choice}- {opciones[choice]}"));
 
             switch (opcion)
             {
@@ -154,9 +244,6 @@ class MenuApp
                 case 6:
                     CerrarSesion();
                     break;
-                default:
-                    Console.WriteLine("Opción invalida.");
-                    break;
             }
         } while (opcion != 6);
 
@@ -164,107 +251,223 @@ class MenuApp
 
     private void MostrarLibros()
     {
-        Console.WriteLine("---Lista de Libros:---");
-        foreach (var libro in libros)
+        int opcion = 0;
+
+        do
         {
-            Console.WriteLine($"{libro.Nombre} {libro.Precio}");
-        }
+            var opciones = new Dictionary<int, string>
+            {
+                {0, "Volver"}
+            };
+
+            int indice = 1;
+
+            AnsiConsole.WriteLine();
+            foreach (var libro in libros)
+            {
+                opciones.Add(indice, libro.Nombre);
+                indice++;
+            }
+
+            opcion = AnsiConsole.Prompt(
+            new SelectionPrompt<int>()
+                .Title("[bold underline green]Selecciona un libro para ver mas detalles: [/]")
+                .MoreChoicesText("[grey](Mueve de arriba hacia abajo para seleccionar tu opción)[/]")
+                .AddChoices(opciones.Keys)
+                .UseConverter(choice => $"{choice}- {opciones[choice]}"));
+
+            if (opcion != 0)
+            {
+
+                Console.Clear();
+                libros.ElementAt(opcion - 1).MostrarDetalles();
+
+                if (usuario.Rol != 0)
+                {
+                    var opcionCompra = new Dictionary<int, string>
+                    {
+                        { 1, "Añadir al carrito" },
+                        { 2, "Volver" },
+                    };
+
+                    int seleccion = AnsiConsole.Prompt(
+                        new SelectionPrompt<int>()
+                            .MoreChoicesText("[grey](Mueve de arriba hacia abajo para seleccionar tu opción)[/]")
+                            .AddChoices(opcionCompra.Keys)
+                            .UseConverter(choice => $"{choice}- {opcionCompra[choice]}"));
+
+                    if (seleccion == 1)
+                    {
+                        Libro libroComprado = libros[opcion - 1];
+
+                        librosComprados.Add(libroComprado);
+                    }
+                }
+                else
+                {
+                    AnsiConsole.MarkupLine("[grey]Pulsa cualquier tecla para volver...[/]");
+                    Console.ReadKey();
+                }
+
+            }
+
+            AnsiConsole.Clear();
+
+        } while (opcion != 0);
     }
 
     private void AgregarLibro()
     {
-        try
-        {
-            Console.WriteLine("---Introduce los datos del libro:---");
-            Console.Write("Nombre del libro: ");
-            string Nombre = Console.ReadLine();
-            Console.Write("Autor: ");
-            string Autor = Console.ReadLine();
-            Console.Write("Precio: ");
-            double Precio = double.Parse(Console.ReadLine());
-            Console.Write("Género: ");
-            string Genero = Console.ReadLine();
-            Console.Write("Fecha de Publicación: ");
-            int Year = int.Parse(Console.ReadLine());
-            int Mes = int.Parse(Console.ReadLine());
-            int Dia = int.Parse(Console.ReadLine());
-            DateTime FechaDePublicacion = new DateTime(Year, Mes, Dia);
-            Console.Write("Editorial: ");
-            string Editorial = Console.ReadLine();
-            Console.Write("Páginas: ");
-            int Paginas = int.Parse(Console.ReadLine());
-            Console.Write("Estatus: ");
-            int Estatus = int.Parse(Console.ReadLine());
+        AnsiConsole.MarkupLine("[bold underline green]Introduce los datos del libro:[/]");
+        AnsiConsole.WriteLine();
+        var Nombre = AnsiConsole.Ask<string>("[blue]Nombre: [/]");
+        var Autor = AnsiConsole.Ask<string>("[blue]Autor: [/]");
+        var Precio = AnsiConsole.Ask<double>("[blue]Precio: [/]");
+        var Genero = AnsiConsole.Ask<string>("[blue]Género: [/]");
 
-            libros.Add(new Libro(Nombre, Autor, Precio, Genero, FechaDePublicacion, Editorial, Paginas, Estatus));
-        }
-        catch (Exception ex)
+        DateTime FechaDePublicacion;
+
+        while (true)
         {
-            var messageError = "ExceptionError" + ex.Message;
-            Console.WriteLine(messageError);
+            string inputFecha = AnsiConsole.Ask<string>("[blue]Fecha de Publicación [yellow](DD-MM-YYYY)[/]:[/] ");
+
+            try
+            {
+                FechaDePublicacion = DateTime.ParseExact(inputFecha, "dd-MM-yyyy", CultureInfo.InvariantCulture);
+                break;
+            }
+            catch (FormatException)
+            {
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine("[red]El formato de la fecha no es valido. Por favor, intentalo nuevamente en formato [yellow]DD-MM-YYYY[/].[/]");
+                AnsiConsole.WriteLine();
+            }
         }
+
+        var Editorial = AnsiConsole.Ask<string>("[blue]Editorial: [/]");
+        var Paginas = AnsiConsole.Ask<int>("[blue]Páginas: [/]");
+        var Estatus = AnsiConsole.Ask<int>("[blue]Estatus: [/]");
+
+
+        libros.Add(new Libro(Nombre, Autor, Precio, Genero, FechaDePublicacion, Editorial, Paginas, Estatus));
+
+        AnsiConsole.Clear();
     }
 
     private void EliminarLibro()
     {
+        var opciones = new Dictionary<int, string>
+        {
+            {0,"Volver"}
+        };
 
         int indice = 1;
 
         foreach (var libro in libros)
         {
-            Console.WriteLine($"{indice} {libro.Nombre}");
+            opciones.Add(indice, libro.Nombre);
             indice++;
         }
 
-        Console.WriteLine("Selecciona el libro que deseas eliminar: ");
-        int numeroLibro = int.Parse(Console.ReadLine());
+        int opcion = AnsiConsole.Prompt(
+                new SelectionPrompt<int>()
+                    .Title("[underline green]Selecciona el libro que deseas eliminar: [/]")
+                    .MoreChoicesText("[grey](Mueve de arriba hacia abajo para seleccionar tu opción)[/]")
+                    .AddChoices(opciones.Keys)
+                    .UseConverter(choice => $"{choice}- {opciones[choice]}"));
 
-        libros.RemoveAt(numeroLibro - 1);
+        if (opcion != 0)
+        {
+            libros.RemoveAt(opcion - 1);
+        }
+
     }
 
     private void ModificarLibro()
     {
+        var opciones = new Dictionary<int, string>
+        {
+
+        };
+
         int indice = 1;
 
         foreach (var libro in libros)
         {
-            Console.WriteLine($"{indice} {libro.Nombre}");
+            opciones.Add(indice, libro.Nombre);
             indice++;
         }
 
-        Console.WriteLine("Selecciona el libro que deseas modificar: ");
-        int numeroLibro = int.Parse(Console.ReadLine());
+        int opcion = AnsiConsole.Prompt(
+                new SelectionPrompt<int>()
+                    .Title("[underline green]Selecciona el libro que deseas modificar: [/]")
+                    .MoreChoicesText("[grey](Mueve de arriba hacia abajo para seleccionar tu opción)[/]")
+                    .AddChoices(opciones.Keys)
+                    .UseConverter(choice => $"{choice}- {opciones[choice]}"));
 
-        Libro libroModificado = libros[numeroLibro - 1];
+        Libro libroModificado = libros[opcion - 1];
 
-        Console.WriteLine("---Introduce los nuevos datos del libro:---");
-        Console.Write("Nombre del libro: ");
-        libroModificado.Nombre = Console.ReadLine();
-        Console.Write("Autor: ");
-        libroModificado.Autor = Console.ReadLine();
-        Console.Write("Precio: ");
-        libroModificado.Precio = double.Parse(Console.ReadLine());
-        Console.Write("Género: ");
-        libroModificado.Genero = Console.ReadLine();
-        Console.Write("Fecha de Publicación: ");
-        int Year = int.Parse(Console.ReadLine());
-        int Mes = int.Parse(Console.ReadLine());
-        int Dia = int.Parse(Console.ReadLine());
-        libroModificado.FechaDePublicacion = new DateTime(Year, Mes, Dia);
-        Console.Write("Editorial: ");
-        libroModificado.Editorial = Console.ReadLine();
-        Console.Write("Páginas: ");
-        libroModificado.Paginas = int.Parse(Console.ReadLine());
-        Console.Write("Estatus: ");
-        libroModificado.Estatus = int.Parse(Console.ReadLine());
+        AnsiConsole.MarkupLine("[underline blue]Introduce los nuevos datos del libro:[/]");
+        AnsiConsole.WriteLine();
+        var Nombre = AnsiConsole.Ask<string>("[blue]Nombre: [/]");
+        var Autor = AnsiConsole.Ask<string>("[blue]Autor: [/]");
+        var Precio = AnsiConsole.Ask<double>("[blue]Precio: [/]");
+        var Genero = AnsiConsole.Ask<string>("[blue]Género: [/]");
 
-        libros[numeroLibro - 1] = libroModificado;
+        DateTime FechaDePublicacion;
 
+        while (true)
+        {
+            string inputFecha = AnsiConsole.Ask<string>("[blue]Fecha de Publicación [yellow](DD-MM-YYYY)[/]:[/] ");
+
+            try
+            {
+                FechaDePublicacion = DateTime.ParseExact(inputFecha, "dd-MM-yyyy", CultureInfo.InvariantCulture);
+                break;
+            }
+            catch (FormatException)
+            {
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine("[red]El formato de la fecha no es valido. Por favor, intentalo nuevamente en formato [yellow]DD-MM-YYYY[/].[/]");
+                AnsiConsole.WriteLine();
+            }
+        }
+
+        var Editorial = AnsiConsole.Ask<string>("[blue]Editorial: [/]");
+        var Paginas = AnsiConsole.Ask<int>("[blue]Páginas: [/]");
+        var Estatus = AnsiConsole.Ask<int>("[blue]Estatus: [/]");
+
+        libros[opcion - 1] = libroModificado;
     }
 
     private void VerCompras()
     {
+        var tablaCompras = new Table();
 
+        tablaCompras.Border = TableBorder.Rounded;
+        tablaCompras.Title = new TableTitle("[bold underline]Compras por Usuario[/]");
+
+        tablaCompras.AddColumn("Usuario");
+        tablaCompras.AddColumn("Fecha de Compra");
+        tablaCompras.AddColumn("Detalles de los Libros");
+
+        compras.ForEach(compra =>
+        {
+            var detallesLibros = new List<string>();
+
+            compra.libros.ForEach(libro =>
+            {
+                detallesLibros.Add($"[green]{libro.Nombre}[/] - [yellow]{libro.Precio:C}[/]");
+            });
+
+            tablaCompras.AddRow(
+                compra.usuario.Nombre,
+                compra.FechaDeCompra.ToString("dd/MM/yyyy"),
+                string.Join("\n", detallesLibros)
+            );
+        });
+
+        AnsiConsole.Write(tablaCompras);
     }
 
     private void CerrarSesion()
@@ -274,30 +477,173 @@ class MenuApp
 
     private void MenuUsuario()
     {
-        Console.WriteLine("---Menú Usuario---");
-        Console.WriteLine("1-Ver todos los Libros");
-        Console.WriteLine("2-Comprar Libro");
-        Console.WriteLine("3-Devolver Libro");
-        Console.WriteLine("4-Ver Compra");
-        Console.WriteLine("5-Cerrar Sesión");
+        int opcion = 0;
+        librosComprados = new List<Libro>();
+
+        do
+        {
+            var opciones = new Dictionary<int, string>
+            {
+                { 1, "Mostrar libros" },
+                { 2, "Devolver Libro" },
+                { 3, "Ver Compra"},
+                { 4, "Cerrar Sesión"},
+            };
+
+            opcion = AnsiConsole.Prompt(
+               new SelectionPrompt<int>()
+                   .Title("[underline bold green]Menú Usuario[/]")
+                   .MoreChoicesText("[grey](Mueve de arriba hacia abajo para seleccionar tu opción)[/]")
+                   .AddChoices(opciones.Keys)
+                   .UseConverter(choice => $"{choice}- {opciones[choice]}"));
+
+            switch (opcion)
+            {
+                case 1:
+                    MostrarLibros();
+                    break;
+                case 2:
+                    DevolverLibro();
+                    break;
+                case 3:
+                    VerCompra();
+                    break;
+                case 4:
+                    CerrarSesion();
+                    break;
+            }
+
+        } while (opcion != 4);
     }
 
-    private void ComprarLibro()
+    private void DevolverLibro()
     {
-        int indice = 1;
-
-        foreach (var libro in libros)
+        if (librosComprados.Count == 0)
         {
-            Console.WriteLine($"{indice} {libro.Nombre}");
-            indice++;
+            AnsiConsole.Markup("[yellow]No hay libros añadidos al carrito.[/]");
+            AnsiConsole.WriteLine();
+            AnsiConsole.WriteLine();
+            AnsiConsole.Markup("[grey]Pulsa cualquier tecla para volver...[/]");
+            Console.ReadKey();
+        }
+        else
+        {
+            var opciones = new Dictionary<int, string>
+            {
+
+            };
+
+            int indice = 1;
+
+            foreach (var libro in librosComprados)
+            {
+                opciones.Add(indice, libro.Nombre);
+                indice++;
+            }
+
+            int opcion = AnsiConsole.Prompt(
+                    new SelectionPrompt<int>()
+                        .Title("[underline green]Selecciona el libro que deseas devolver: [/]")
+                        .MoreChoicesText("[grey](Mueve de arriba hacia abajo para seleccionar tu opción)[/]")
+                        .AddChoices(opciones.Keys)
+                        .UseConverter(choice => $"{choice}- {opciones[choice]}"));
+
+            librosComprados.RemoveAt(opcion - 1);
+        }
+        Console.Clear();
+    }
+
+    private void VerCompra()
+    {
+        if (librosComprados.Count == 0)
+        {
+            AnsiConsole.Markup("[yellow]No hay libros añadidos al carrito.[/]");
+            AnsiConsole.WriteLine();
+            AnsiConsole.WriteLine();
+            AnsiConsole.Markup("[grey]Pulsa cualquier tecla para volver...[/]");
+            Console.ReadKey();
+        }
+        else
+        {
+            int opcion = 0;
+            double totalPrecio = 0;
+
+            var tablaCompra = new Table();
+
+            tablaCompra.Border = TableBorder.Rounded;
+            tablaCompra.Title = new TableTitle("[bold underline green] Lista de Compra[/]");
+
+            tablaCompra.AddColumn("Descripción");
+            tablaCompra.AddColumn("Precio Unitario");
+            tablaCompra.AddColumn("Subtotal");
+
+            foreach (var libro in librosComprados)
+            {
+                tablaCompra.AddRow($"{libro.Nombre}", $"{libro.Precio:C}", $"{libro.Precio:C}");
+                totalPrecio += libro.Precio;
+            }
+
+            double iva = totalPrecio * 0.21;
+            double totalConIva = totalPrecio + iva;
+
+            tablaCompra.AddEmptyRow();
+
+            tablaCompra.AddRow(
+                "[bold]Subtotal[/]",
+                string.Empty,
+                $"[bold yellow]{totalPrecio:C}[/]"
+            );
+
+            tablaCompra.AddRow(
+                "[bold]IVA (21%)[/]",
+                string.Empty,
+                $"[bold yellow]{iva:C}[/]"
+            );
+
+            tablaCompra.AddRow(
+                "[bold]Total[/]",
+                string.Empty,
+                $"[bold green]{totalConIva:C}[/]"
+            );
+
+            AnsiConsole.Write(tablaCompra);
+
+            do
+            {
+                var opciones = new Dictionary<int, string>
+                {
+                    { 1, "Finalizar Compra" },
+                    { 2, "Volver" },
+                };
+
+                opcion = AnsiConsole.Prompt(
+                    new SelectionPrompt<int>()
+                        .MoreChoicesText("[grey](Mueve de arriba hacia abajo para seleccionar tu opción)[/]")
+                        .AddChoices(opciones.Keys)
+                        .UseConverter(choice => $"{choice}- {opciones[choice]}"));
+
+                switch (opcion)
+                {
+                    case 1:
+                        FinalizarCompra();
+                        break;
+                    case 2:
+                        break;
+                }
+            } while (opcion != 1 && opcion != 2);
+
         }
 
-        Console.WriteLine("Selecciona el libro que deseas comprar: ");
-        int numeroLibro = int.Parse(Console.ReadLine());
+        Console.Clear();
+    }
 
-        Libro libroComprado = libros[numeroLibro - 1];
+    private void FinalizarCompra()
+    {
+        Compra compraFinal = new Compra(librosComprados, this.usuario);
 
-        librosComprados.Add(libroComprado);
+        compras.Add(compraFinal);
+
+        librosComprados.Clear();
     }
 
     private void GuardarDatos()
